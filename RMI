@@ -1,0 +1,130 @@
+/* Write a client-server project with RMI to sort two arrays and merge them into a third array. On the server side two methods are defined named: sort and merge. 
+The method: sort gets an unsorted array from the client, sorts the array, and retunes the 
+sorted array to the client. The client needs to call this method two times to sort both arrays. Therefore it is the client that creates two arrays of random integers
+The method: merge gets two sorted arrays from the client, merges them, and returns the merged array to the client. Therefore it is the server that creates an array to merge the two arrays into this array.
+Finally, the client defines a method named: display to display the sorted arrays and the merge array. */
+
+Answer:
+
+
+The server classes and interface:
+
+import java.net.MalformedURLException;
+import java.rmi.*;
+import java.rmi.registry.LocateRegistry;
+
+public class SortAndMergeServer {
+	public static void main(String arg[]) throws RemoteException, MalformedURLException{
+		
+		int port = 16790; 
+	    String host = "localhost";
+	    SortAndMergeImpl exportedObj = new SortAndMergeImpl();
+	    LocateRegistry.createRegistry(port);
+	    String registryURL = "rmi://" + host + ":" + port + "/hello";
+	    Naming.rebind(registryURL, exportedObj);
+	    System.out.println("Hello Server ready.");
+	}
+}
+
+
+import java.rmi.server.UnicastRemoteObject;
+import java.rmi.*;
+
+@SuppressWarnings("serial")
+public class SortAndMergeImpl extends UnicastRemoteObject implements SortAndMergeInterface {
+
+	protected SortAndMergeImpl() throws RemoteException {
+		super();
+	}
+
+	@Override
+	public int[] sort(int[] x) throws RemoteException {
+		
+		    for(int i = 0; i < x.length ; i++){
+		      int indexOfSmallest = findIndexOfSmallest(x, i);
+		      int t = x[i];
+		      x[i] = x[indexOfSmallest];
+		      x[indexOfSmallest] = t;
+		    }
+		    return x;  
+	}
+	
+	private static int findIndexOfSmallest(int[] a, int from){
+	    int indexOfSmallest = from;
+
+	    for(int i = from; i < a.length; i++)
+	      if(a[i] < a[indexOfSmallest])
+	        indexOfSmallest = i;
+	    return indexOfSmallest;
+	  }
+	@Override
+	public int[] merge(int[] a, int[] b) throws RemoteException {
+		// Auto-generated method stub
+		    int aIndex = 0, bIndex = 0, cIndex = 0;
+		    int[] c = new int[a.length + b.length];
+		    while(aIndex < a.length && bIndex < b.length)
+		      if(a[aIndex] < b[bIndex])
+		        c[cIndex++] = a[aIndex++];
+		      else
+		        c[cIndex++] = b[bIndex++];
+
+		    while(aIndex < a.length)
+		      c[cIndex++] = a[aIndex++];
+		    
+		    while(bIndex < b.length)
+		      c[cIndex++] = b[bIndex++];
+		    return c;
+	}
+	
+}
+
+The client class and interface:
+
+import java.net.MalformedURLException;
+import java.rmi.Naming;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.util.Random;
+
+public class SortAndMergeClient {
+	public static void main(String arg[]) throws MalformedURLException, RemoteException, NotBoundException{
+		Random r = new Random(System.currentTimeMillis());
+	    int n = r.nextInt(101) + 50;
+	    
+	    int[] a = new int[n];
+	    for(int i = 0; i < n; i++)
+	    a[i] = r.nextInt(100);
+		    
+	    n = r.nextInt(101) + 50;
+	    int[] b = new int[n];
+	    for(int i = 0; i < n; i++)
+	    b[i] = r.nextInt(100);
+	    
+	    int port = 16790;         
+	    String host = "localhost";
+	    String registryURL = "rmi://" + host + ":" + port + "/hello";
+	    SortAndMergeInterface h = (SortAndMergeInterface)Naming.lookup(registryURL);
+	    System.out.println("Lookup completed ");
+	    int[] sortA = h.sort(a); //Sort array A
+	    int[] sortB = h.sort(b); //Sort array B
+	    int[] merge = h.merge(sortA, sortB); //Merge A and B arrays
+	    display(sortA);
+	    display(sortB);
+	    display(merge);
+	}
+	
+	//Display arrays
+	static void display(int[] x) {
+	    for(int i = 0; i < x.length; i++)
+	      System.out.print(x[i] + ", ");
+	      System.out.println("\n---------------------------------");
+	  }
+}
+import java.rmi.*;
+public interface SortAndMergeInterface extends Remote {
+  //This interface is complete. Do not change it.
+  public int[] sort(int[] x) throws RemoteException;
+  public int[] merge(int[] a, int[] b) throws RemoteException;
+}
+
+
